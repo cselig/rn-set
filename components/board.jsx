@@ -11,57 +11,78 @@ function randomIntInRange(min, max) {
 }
 
 export default class Board extends React.Component {
-  n = 3;
-  m = 3;
-  cards = [];
+  n = 4;
+  m = 4;
 
   constructor(props) {
     super(props);
 
+    var cards = [];
     for (var i = 0; i < (this.m * this.n); i++) {
-      var cardData = {"key": i};
-      PROPERTIES.forEach((prop, _) => cardData[prop] = randomIntInRange(0, 2));
-      this.cards.push(cardData);
+      cards.push(this.newCard(i));
     }
 
     this.state = {
-      selectedCards: new Set()
+      selectedCards: new Set(),
+      cards: cards,
     };
+  }
+
+  newCard(key) {
+    var cardData = {"key": key};
+    PROPERTIES.forEach((prop, _) => cardData[prop] = randomIntInRange(0, 2));
+    return cardData;
   }
 
   isSet() {
     if (this.state.selectedCards.size != SET_SIZE) {
       return false;
     }
-    // TODO: cleaner way to do this?
+
     var isSet = true;
     PROPERTIES.forEach((prop, _) => {
-      var collectedProps = []
+      var l = []
       this.state.selectedCards.forEach((key) => {
-        var val = this.cards[key][prop];
-        collectedProps.push(val);
+        var val = this.state.cards[key][prop];
+        l.push(val);
       });
-      if (!(collectedProps[1] == collectedProps[0] && collectedProps[2] == collectedProps[1])) {
+      if (!(
+          (l[1] == l[0] && l[2] == l[1])
+          ||
+          (l[0] != l[1] && l[1] != l[2] && l[2] != l[0]))) {
         isSet = false;
       }
     });
     return isSet;
   }
 
+  reloadCards() {
+    var newCards = Object.assign({}, this.state.cards);
+    Object.assign(this.state.cards, newCards);
+    this.state.selectedCards.forEach((key) => {
+      newCards[key] = this.newCard(key);
+    });
+    this.setState({cards: newCards});
+    this.setState({selectedCards: new Set()});
+  }
+
   render() {
-    // TODO: display this result
-    this.isSet();
+    var isSet = this.isSet();
+
+    if (isSet) {
+      this.props.incSets();
+      this.reloadCards();
+    }
 
     var cardsToRender = []
     for (var i = 0; i < this.m; i++) {
       var currRow = []
       for (var j = 0; j < this.n; j++) {
-        var key = 3 * j + i;
+        var key = this.n * i + j;
 
         var selected = this.state.selectedCards.has(key);
 
         var onPress = ((key, selected, selectedCards) => {
-          // TODO: is there a cleaner way to update state in this situation?
           if (selected) {
             selectedCards.delete(key);
           } else if (selectedCards.size < SET_SIZE) {
@@ -74,7 +95,7 @@ export default class Board extends React.Component {
                     num={key}
                     key={key}
                     selected={selected}
-                    cardData={this.cards[key]}
+                    cardData={this.state.cards[key]}
                     onPress={onPress}/>);
       }
       cardsToRender.push(<View class="card-row">{currRow}</View>);
@@ -91,7 +112,6 @@ export default class Board extends React.Component {
 const styles = StyleSheet.create(
   {
     board: {
-      backgroundColor: 'lightgrey',
       display: 'flex',
       flexDirection: 'row',
     },
